@@ -7,18 +7,26 @@ class Card:
         self.num  = num
 
     def __str__(self):
-        return suits[self.suit] + self.num
+        return suits[self.suit] + numbers[self.num]
 
     def render(self, pos):
         screen.blit(card_texture, pos)
         screen.blit(suits_textures[self.suit], pos)
+        screen.blit(numbers_texts[self.num], (pos[0]+card_width/8, pos[1]+card_height/8))
 
 class Player:
     def __init__(self):
         self.cards = []
 
-    def get_card(self):
+    def add_card(self):
         self.cards.append(cards.pop())
+
+    def get_cards_sum(self):
+        sum = 0
+        for card in self.cards:
+            if card.num > 9: sum += 10
+            else:            sum += card.num+1
+        return sum
 
 screen_width  = 640
 screen_height = 360
@@ -28,6 +36,7 @@ card_height = 64
 cards_pile_pos = ((screen_width  - card_width)/2,
                   (screen_height - card_height)/2)
 
+numbers = ("A", "2", "3", "4", "5", "6", "7", "8", "9", "J", "Q", "K")
 suits = ("♢ ", "♤ ", "♡ ", "♧ ")
 suits_names = ("diamonds", "spades", "hearts", "clubs")
 suits_textures = []
@@ -40,7 +49,6 @@ players_deck_pos = (
 )
 
 
-
 def reset():
     global cards
     global round
@@ -49,11 +57,8 @@ def reset():
     cards = []
     players = (Player(), Player(), Player(), Player())
     for suit in range(4):
-        cards.append(Card(suit, "A"))
-        for i in range(2, 10): cards.append(Card(suit, str(i)))
-        cards.append(Card(suit, "J"))
-        cards.append(Card(suit, "Q"))
-        cards.append(Card(suit, "K"))
+        for number in range(12):
+            cards.append(Card(suit, number))
     random.shuffle(cards)
 
     for i in range(4):
@@ -74,13 +79,19 @@ def update(events, keys):
             if event.key == pygame.K_z: z_down = True
             if event.key == pygame.K_x: x_down = True
 
-    if len(cards) == 0:
-        round = 4
+    if round == 4:
+        pass
     elif round == 0:
-        if z_down: players[round].get_card()
-        if x_down: round += 1
+        if z_down:
+            players[round].add_card()
+        if x_down or len(players[round].cards) >= 7:
+            round += 1
     else:
-        players[round].get_card()
+        sum = players[round].get_cards_sum()
+        if sum <= 16 and len(players[round].cards) < 7:
+            players[round].add_card()
+        else:
+            round += 1
 
 def render():
     screen.fill((200, 20, 30))
@@ -142,6 +153,13 @@ card_texture = pygame.image.load("card.png").convert_alpha()
 card_back_texture = pygame.image.load("card_back.png").convert_alpha()
 for suit_name in suits_names:
     suits_textures.append(pygame.image.load(suit_name + ".png").convert_alpha())
+
+# setup text
+pygame.font.init()
+numbers_font = pygame.font.SysFont('Comic Sans MS', 15)
+numbers_texts = []
+for i in range(12):
+    numbers_texts.append(numbers_font.render(numbers[i], False, (0, 0, 0)))
 
 reset()
 
